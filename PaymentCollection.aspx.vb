@@ -28,6 +28,8 @@ Partial Class APPS_Services_PaymentCollection
                 pnlPaymentCollection.Visible = True
                 pnlProductDetails.Visible = False
                 pnlPaymentHistory.Visible = False
+                pnlDeliveryAddress.Visible = False
+
             End If
         Catch ex As Exception
             If ex.Message.StartsWith("{*}") Then
@@ -65,7 +67,7 @@ Partial Class APPS_Services_PaymentCollection
         Try
             If rbtnpaytype.SelectedValue.ToString() = "1" Then
                 Dim productid = Convert.ToInt32(ddlProduct.SelectedValue)
-
+                pnlDeliveryAddress.Visible = True
                 pnlProductDetails.Visible = False
                 trtransactionid.Visible = False
                 trpaymentDate.Visible = False
@@ -81,12 +83,24 @@ Partial Class APPS_Services_PaymentCollection
 
                         If dr IsNot Nothing Then
                             Dim amount = Decimal.Parse(dr("Amount").ToString())
+                            Dim ProductType = dr("ProductType").ToString()
                             txtAmount.Text = Math.Round(amount, 2)
                             pnlProductDetails.Visible = True
-                        End If
+
+                            If ProductType = 1 Then
+                                pnlDeliveryAddress.Visible = False
+                            ElseIf ProductType = 2 Then
+                                pnlDeliveryAddress.Visible = True
+                            ElseIf ProductType = 3 Then
+                                pnlDeliveryAddress.Visible = False
+                            End If
+
                     End If
+
+                        End If
                 End If
             Else
+
                 Dim productid = Convert.ToInt32(ddlProduct.SelectedValue)
 
                 pnlProductDetails.Visible = True
@@ -95,6 +109,7 @@ Partial Class APPS_Services_PaymentCollection
                 trfileupload.Visible = True
                 trpaymentservice.Visible = True
                 trRemarks.Visible = False
+                pnlDeliveryAddress.Visible = True
                 btnPayment.Text = "Submit"
                 If productid > 0 Then
                     Dim productlist = objTopup.CollectionProductList(productid)
@@ -104,20 +119,36 @@ Partial Class APPS_Services_PaymentCollection
 
                         If dr IsNot Nothing Then
                             Dim amount = Decimal.Parse(dr("Amount").ToString())
+                            Dim ProductType = dr("ProductType").ToString()
                             txtAmount.Text = Math.Round(amount, 2)
                             pnlProductDetails.Visible = True
+                            If ProductType = 1 Then
+                                pnlDeliveryAddress.Visible = False
+                            ElseIf ProductType = 2 Then
+                                pnlDeliveryAddress.Visible = True
+                            ElseIf ProductType = 3 Then
+                                pnlDeliveryAddress.Visible = False
+                            End If
                         End If
                     End If
                 End If
             End If
+
             ddlpaymentservice.SelectedValue = "0"
             txtTransactionID.Text = ""
             txtpaymentDate.Text = ""
             txtAgentCode.Text = ""
             txtAgentName.Text = ""
-
             txtpaymentDate.Text = ""
+            txtPinCode.Text = ""
+            ddlState.Items.Clear()
+            ddlState.Items.Add(New ListItem("--Select--", "0"))
 
+            ddlDistrict.Items.Clear()
+            ddlDistrict.Items.Add(New ListItem("--Select--", "0"))
+
+            ddlcity.Items.Clear()
+            ddlcity.Items.Add(New ListItem("--Select--", "0"))
 
         Catch ex As Exception
             If ex.Message.StartsWith("{*}") Then
@@ -147,6 +178,7 @@ Partial Class APPS_Services_PaymentCollection
                     Say(Me.Page, "Invalid Agent Code", True)
                     txtAgentCode.Text = String.Empty
                 End If
+
             End If
         Catch ex As Exception
             If ex.Message.StartsWith("{*}") Then
@@ -162,6 +194,14 @@ Partial Class APPS_Services_PaymentCollection
     Protected Sub PaymentRequest(ByVal sender As Object, ByVal e As System.EventArgs)
         Try
             Dim userid = Session("Userinfo")(0)
+            Dim PincodeID = ddlcity.SelectedValue
+            'Dim Statename = ddlState.SelectedValue
+            'Dim Districtname = ddlDistrict.SelectedValue
+            'Dim Cityname = ddlcity.SelectedValue
+
+            Dim Address = txtAddress.Text
+            Dim LandMark = txtLandmark.Text
+            Dim AlternateMobileNo = txtAltMobile.Text
             Dim amount = Decimal.Parse(txtAmount.Text)
             Dim PaymentModex = "PAYMENTGATEWAY"
             Dim remarks = txtRemarks.Text
@@ -169,8 +209,9 @@ Partial Class APPS_Services_PaymentCollection
             Dim productid = Convert.ToInt32(ddlProduct.SelectedValue)
             Dim CollectionID As String = ""
 
+
             If btnPayment.Text = "Pay Now" Then
-                CollectionID = objTopup.PaymentProdCollectionBeta(userid, amount, 0, PaymentModex, remarks, userid, productid, refagentcode)
+                CollectionID = objTopup.PaymentProdCollectionBeta(userid, amount, 0, PaymentModex, remarks, userid, productid, refagentcode, PincodeID, Address, LandMark, AlternateMobileNo)
 
                 If Not String.IsNullOrEmpty(CollectionID) Then
 
@@ -197,6 +238,7 @@ Partial Class APPS_Services_PaymentCollection
                     txtAgentCode.Text = String.Empty
                     txtAgentName.Text = String.Empty
                     txtRemarks.Text = String.Empty
+                    Say(Me.Page, "Request Successfully Submitted ", True)
 
                 Else
                     Say(Me.Page, "Payment Collection Failed", True)
@@ -241,15 +283,21 @@ Partial Class APPS_Services_PaymentCollection
                     Exit Sub
                 End If
 
-                CollectionID = objTopup.PaymentProdCollectionAlreadyPaid(userid, amount, 0, txtTransactionID.Text, "", userid, productid, refagentcode, ddlpaymentservice.SelectedValue.ToString(), txtpaymentDate.Text, fileSignaturepth)
+                CollectionID = objTopup.PaymentProdCollectionAlreadyPaid(userid, amount, 0, txtTransactionID.Text, "", userid, productid, refagentcode, ddlpaymentservice.SelectedValue.ToString(), txtpaymentDate.Text, fileSignaturepth, PincodeID, Address, LandMark, AlternateMobileNo)
                 txtAgentCode.Text = String.Empty
                 txtAgentName.Text = String.Empty
                 txtRemarks.Text = String.Empty
                 txtpaymentDate.Text = String.Empty
                 txtTransactionID.Text = String.Empty
+                txtPinCode.Text = String.Empty
+                txtAddress.Text = String.Empty
+                txtLandmark.Text = String.Empty
+                txtAltMobile.Text = String.Empty
                 Say(Me.Page, "Request Successfully Submitted ", True)
             End If
-
+            rbtnpaytype.SelectedValue = "1"
+            ddlProduct.SelectedValue = "0"
+            ddlProduct_SelectedIndexChanged(sender, e)
 
 
         Catch ex As Exception
@@ -257,7 +305,6 @@ Partial Class APPS_Services_PaymentCollection
                 Say(Me.Page, ex.Message, True)
             Else
                 LogError(ex.Message.ToString(), Me.Page.Title, "PaymentRequest")
-                'Response.Redirect(gcsErrorURL, False)
             End If
         End Try
     End Sub
@@ -405,7 +452,7 @@ Partial Class APPS_Services_PaymentCollection
         Try
             If rbtnpaytype.SelectedValue.ToString() = "1" Then
                 Dim productid = Convert.ToInt32(ddlProduct.SelectedValue)
-
+                pnlDeliveryAddress.Visible = True
                 pnlProductDetails.Visible = False
                 trtransactionid.Visible = False
                 trpaymentDate.Visible = False
@@ -422,6 +469,14 @@ Partial Class APPS_Services_PaymentCollection
                 txtTransactionID.Text = ""
                 ddlpaymentservice.SelectedValue = "0"
                 ddlProduct.SelectedValue = "0"
+                ddlState.Items.Clear()
+                ddlState.Items.Add(New ListItem("--Select--", "0"))
+
+                ddlDistrict.Items.Clear()
+                ddlDistrict.Items.Add(New ListItem("--Select--", "0"))
+
+                ddlcity.Items.Clear()
+                ddlcity.Items.Add(New ListItem("--Select--", "0"))
             Else
                 Dim productid = Convert.ToInt32(ddlProduct.SelectedValue)
 
@@ -431,6 +486,8 @@ Partial Class APPS_Services_PaymentCollection
                 trfileupload.Visible = True
                 trpaymentservice.Visible = True
                 trRemarks.Visible = False
+                pnlDeliveryAddress.Visible = False
+
                 btnPayment.Text = "Submit"
 
                 txtAgentCode.Text = ""
@@ -441,6 +498,14 @@ Partial Class APPS_Services_PaymentCollection
                 txtTransactionID.Text = ""
                 ddlpaymentservice.SelectedValue = "0"
                 ddlProduct.SelectedValue = "0"
+                ddlState.Items.Clear()
+                ddlState.Items.Add(New ListItem("--Select--", "0"))
+
+                ddlDistrict.Items.Clear()
+                ddlDistrict.Items.Add(New ListItem("--Select--", "0"))
+
+                ddlcity.Items.Clear()
+                ddlcity.Items.Add(New ListItem("--Select--", "0"))
             End If
 
 
@@ -451,6 +516,72 @@ Partial Class APPS_Services_PaymentCollection
                 LogError(ex.Message.ToString(), Me.Page.Title, "ddlProduct_SelectedIndexChanged")
                 Response.Redirect(gcsErrorURL, False)
             End If
+        End Try
+    End Sub
+    Protected Sub txtpincode_TextChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles txtPinCode.TextChanged
+        Try
+            PincodeBind()
+
+        Catch ex As Exception
+            If ex.Message.StartsWith("{*}") Then
+                Say(Me.Page, ex.Message, True)
+            Else
+                LogError(ex.Message.ToString(), Me.Page.Title, "txtpincode_TextChanged")
+                Response.Redirect(gcsErrorURL, False)
+            End If
+        End Try
+    End Sub
+    Private Sub PincodeBind()
+        Dim objDT As clsTopup
+        Dim objPIN As DataTable
+        Try
+
+            If String.IsNullOrWhiteSpace(txtPinCode.Text) OrElse Not IsNumeric(txtPinCode.Text) Then
+                ' Clear dropdowns when no PIN entered
+                ddlState.Items.Clear()
+                ddlState.Items.Add(New ListItem("--Select--", "0"))
+
+                ddlDistrict.Items.Clear()
+                ddlDistrict.Items.Add(New ListItem("--Select--", "0"))
+
+                ddlcity.Items.Clear()
+                ddlcity.Items.Add(New ListItem("--Select--", "0"))
+                Exit Sub
+            End If
+            objDT = New clsTopup
+            objPIN = objDT.GetMasterDataByPincode(txtPinCode.Text)
+            If (objPIN.Rows.Count > 0) Then
+
+                ddlState.Items.Clear()
+                ddlState.Items.Add(New ListItem("--Select--", "0"))
+                ddlState.DataSource = objPIN
+                ddlState.DataTextField = "statename"
+                ddlState.DataValueField = "stateid"
+                ddlState.DataBind()
+
+                ddlDistrict.Items.Clear()
+                ddlDistrict.Items.Add(New ListItem("--Select--", "0"))
+                ddlDistrict.DataSource = objPIN
+                ddlDistrict.DataTextField = "districtname"
+                ddlDistrict.DataValueField = "districtid"
+                ddlDistrict.DataBind()
+
+
+                ddlcity.Items.Clear()
+                ddlcity.Items.Add(New ListItem("--Select--", "0"))
+                ddlcity.DataSource = objPIN
+                ddlcity.DataTextField = "AreaName"
+                ddlcity.DataValueField = "PincodeID"
+                ddlcity.DataBind()
+
+            Else
+                Say(Me.Page, "Please Enter Correct PIN Code.", True)
+                txtPinCode.Text = ""
+                Exit Sub
+            End If
+
+        Catch ex As Exception
+            Throw ex
         End Try
     End Sub
 End Class
